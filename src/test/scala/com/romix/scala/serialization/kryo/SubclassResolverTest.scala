@@ -32,6 +32,26 @@ class SubclassResolverTest extends SpecCase {
     roundTrip(52, map1)
   }
   
+  "SubclassResolver" should "permit more-specific types to work when specified" in {
+    import scala.collection.immutable.{HashMap, ListMap}
+    
+    kryo.setRegistrationRequired(true)
+    // The usual generic case:
+    kryo.addDefaultSerializer(classOf[scala.collection.immutable.Map[_, _]], classOf[ScalaImmutableAbstractMapSerializer])
+    kryo.register(classOf[scala.collection.immutable.Map[_,_]], 40)
+    // The more-precise Map type that we want here:
+    kryo.register(classOf[scala.collection.immutable.ListMap[_,_]], new ScalaImmutableMapSerializer, 41)
+    kryo.getClassResolver match {
+      case resolver:SubclassResolver => resolver.enable()
+    }
+    val map1 = Map("Rome" -> "Italy", "London" -> "England", "Paris" -> "France", "New York" -> "USA", "Tokio" -> "Japan", "Peking" -> "China", "Brussels" -> "Belgium")
+    val map2 = ListMap("Rome" -> "Italy", "London" -> "England", "Paris" -> "France", "New York" -> "USA", "Tokio" -> "Japan", "Peking" -> "China", "Brussels" -> "Belgium")
+    val map1Copy = roundTrip(52, map1)
+    val map2Copy = roundTrip(52, map2)
+    assert(map1Copy.isInstanceOf[HashMap.HashTrieMap[_,_]])
+    assert(map2Copy.isInstanceOf[ListMap[_,_]])
+  }
+  
   "SubclassResolver" should "work with normal Set" in {
     kryo.setRegistrationRequired(true)
     kryo.addDefaultSerializer(classOf[scala.collection.Set[_]], classOf[ScalaImmutableAbstractSetSerializer])
